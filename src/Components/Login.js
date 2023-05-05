@@ -4,45 +4,47 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useForm } from "react-hook-form";
 import axios from 'axios';
+import { loginUser} from './../store/userSlice'
+import { useAppDispatch } from '../store';
+import { useAppSelector } from '../store';
+import { getValue } from '@testing-library/user-event/dist/utils';
 
 const Login = () => {
 
     const navigate = useNavigate()
-    const [user, setUser] = useState({
-        email: "",
-        password: ""
-    })
-    // useEffect(() => {
-    //     if (localStorage.getItem('token')) {
-    //       navigate('/')
-    //     }
-    //   }, [])
+    const dispatch = useAppDispatch();
+    const user= useAppSelector((state)=>state.user.users)
+    console.log('user',user);
+    // const [user, setUser] = useState({
+    //     email: "",
+    //     password: ""
+    // })
+    useEffect(() => {
+        if (localStorage.getItem('token')) {
+          navigate('/')
+        }
+      }, [])
     const {
         register,
         handleSubmit,
         watch,
         setValue,
+        getValues,
         formState: { errors }
     } = useForm();
-    const { email, password } = user
-    const handleChange = (event) => {
-        setUser({ ...user, [event.target.name]: event.target.value })
-    }
-    const onSubmit = async (event) => {
-        event.preventDefault()
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_HOST}/api/login`, {
-        //     method: 'POST', // or 'PUT'
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify(user),
-        // })
-        // const response = await res.json()
-        const payload ={}
+    const onSubmit = async () => {
+                // login and registration can possible with using state 
+        // with help of useform hook 
+        try {const email = getValues('email')
+       const password = getValues('password')
+       console.log('getvalue(email)',email)
+       dispatch(loginUser({ email,password}))
+        const payload ={email,password}
         const {data:response}= await axios.post('https://reqres.in/api/login',payload)
-        if (response.success) {
+        console.log('response',response);
+        if (response?.token) {
             toast.success('You successfully logged in', {
-                position: "top-left",
+                position: "top-right",
                 autoClose: 1000,
                 hideProgressBar: false,
                 closeOnClick: true,
@@ -52,14 +54,16 @@ const Login = () => {
                 theme: "light",
             });
             console.log(response.token)
-            localStorage.setItem('token', response.token)
+            localStorage.setItem('token', response?.token)
             setTimeout(() => {
-                navigate(process.env.NEXT_PUBLIC_HOST)
+                navigate('/')
             }, 1000)
         }
-        else {
-            toast.error(response.message, {
-                position: "top-left",
+        }
+        catch (errors) {
+            console.log('erros',errors?.response?.data?.error)
+            toast.error(errors?.response?.data?.error, {
+                position: "top-right",
                 autoClose: 1000,
                 hideProgressBar: false,
                 closeOnClick: true,
@@ -99,10 +103,8 @@ const Login = () => {
                         <div className="-space-y-px rounded-md shadow-sm" >
                             <div>
                                 <label htmlFor="email" className="sr-only">Email address</label>
-                                {/* <input value={email} onChange={handleChange} {...register('email', { */}
                                 <input {...register('email', {
                                     required: 'Email is required.',   
-                                    onChange:(e)=>handleChange(e),
                                     pattern: {
                                         value: /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
                                         message: 'Please enter a valid email',
@@ -113,24 +115,21 @@ const Login = () => {
                                 </small>
                             </div>
                             <div>
-                                <label htmlFor="password" className="sr">Password</label>
-                                {/* <input value={password} onChange={handleChange} {...register({ */}
                                 <input  {...register('password',{
                                     required: "Password is required.",
-                                    onChange:(e)=>handleChange(e),
                                     maxLength: {
                                         value: 15,
                                         message: "Password length must not exceed 15 characters.",
                                     },
                                     minLength: {
-                                        value: 8,
-                                        message: "Password length must be atleast 8 characters.",
+                                        value: 6,
+                                        message: "Password length must be atleast 6 characters.",
                                     },
-                                    pattern:{
-                                        value:/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/
-                                        ,
-                                        message:'Use 8 or more characters with a mix of letters, numbers & symbols'
-                                    },
+                                    // pattern:{
+                                    //     value:/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/
+                                    //     ,
+                                    //     message:'Use 8 or more characters with a mix of letters, numbers & symbols'
+                                    // },
                                 })} id="password" name="password" type="password" autocomplete="current-password"  className="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm" placeholder="Password" />
                             <small className="text-red-600">
                                     {errors?.password && errors.password.message}

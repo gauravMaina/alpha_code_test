@@ -3,51 +3,68 @@ import { useForm } from "react-hook-form";
 import axios from 'axios';
 import { useNavigate, NavLink } from 'react-router-dom'; import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css';
+import { useAppDispatch, useAppSelector } from '../store';
+import { loginUser } from '../store/userSlice';
 const Register = () => {
     const {
         register,
-        handleSubmit,
+        handleSubmit,getValues,
         watch,
         setValue,
         formState: { errors }
     } = useForm();
     const navigate = useNavigate()
-    const [user, setUser] = useState({
-        name: "",
-        email: "",
-        password: ""
-    })
-    // useEffect(() => {
-    //     if (localStorage.getItem('token')) {
-    //       navigate('/')
-    //     }
-    //   }, [])
-    const { name, email, password } = user
-    const handleChange = (event) => {
-        setUser({ ...user, [event.target.name]: event.target.value })
-    }
-    const onSubmit = async (event) => {
-        event.preventDefault()
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_HOST}/api/signup`, {
-        //     method: 'POST', // or 'PUT'
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify(user),
-        // })
-        // const response = await res.json()
-        const payload ={}
+    const dispatch = useAppDispatch();
+    const user= useAppSelector((state)=>state.user.users)
+    console.log('user',user);
+    useEffect(() => {
+        if (localStorage.getItem('token')) {
+          navigate('/')
+        }
+      }, [])
+    
+    const onSubmit = async () => {
+        // login and registration can possible with using state 
+        // with help of useform hook 
+        try {const email = getValues('email')
+       const password = getValues('password')
+       console.log('getvalue(email)',email)
+       dispatch(loginUser({ email,password}))
+
+        const payload ={email,password}
         const {data:response}= await axios.post('https://reqres.in/api/register',payload)
-        toast.success(response.message, {
-            position: "top-left",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-        });
+        console.log('response',response);
+        if (response?.token) {
+            toast.success('You successfully logged in', {
+                position: "top-right",
+                autoClose: 1000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "light",
+            });
+            console.log(response.token)
+            localStorage.setItem('token', response?.token)
+            setTimeout(() => {
+                navigate('/')
+            }, 1000)
+        }
+        }
+        catch (errors) {
+            console.log('erros',errors?.response?.data?.error)
+            toast.error(errors?.response?.data?.error, {
+                position: "top-right",
+                autoClose: 1000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "light",
+            });
+        }
     }
     return (
         <div>
@@ -97,8 +114,8 @@ const Register = () => {
                                 </small>
                             </div>
                             <div>
-                                <label htmlFor="name" className="sr-only">Last Name</label>
-                                <input id="name" {...register("lastName", {
+                                <label htmlFor="lastName" className="sr-only">Last Name</label>
+                                <input id="lastName" {...register("lastName", {
                                     required: {
                                         value: true,
                                         message: "Please enter last name."
@@ -114,17 +131,15 @@ const Register = () => {
                                         value: /([A-Z][a-z]*)([\\s\\\'-][A-Z][a-z]*)*/,
                                         message: 'Please enter valid fisrt name.',
                                     },
-                                })} name="name" type="text" autoComplete="name" className="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm" placeholder="Last Name" />
+                                })} name="lastName" type="text" autoComplete="lastName" className="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm" placeholder="Last Name" />
                             <small className="text-red-600">
                                     {errors?.lastName && errors.lastName.message}
                                 </small>
                             </div>
                             <div>
                                 <label htmlFor="email" className="sr-only">Email address</label>
-                                {/* <input id="email" value={email} onChange={handleChange} name="email" type="email" autoComplete="email" className="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm" placeholder="Email address" /> */}
                                 <input id="email" {...register('email', {
                                     required: 'Email is required.',
-                                    onChange: (e) => handleChange(e),
                                     pattern: {
                                         value: /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
                                         message: 'Please enter a valid email',
@@ -138,20 +153,20 @@ const Register = () => {
                                 <label htmlFor="password" className="sr-only">Password</label>
                                 <input id="password" {...register('password', {
                                     required: "Password is required.",
-                                    onChange: (e) => handleChange(e),
                                     maxLength: {
                                         value: 15,
                                         message: "Password length must not exceed 15 characters.",
                                     },
                                     minLength: {
-                                        value: 8,
-                                        message: "Password length must be atleast 8 characters.",
+                                        value: 6,
+                                        message: "Password length must be atleast 6 characters.",
                                     },
-                                    pattern: {
-                                        value: /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/
-                                        ,
-                                        message: 'Use 8 or more characters with a mix of letters, numbers & symbols'
-                                    },
+                                    //pasword pattern is commented beacause requers contain lowercase passwords
+                                    // pattern: {
+                                    //     value: /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/
+                                    //     ,
+                                    //     message: 'Use 8 or more characters with a mix of letters, numbers & symbols'
+                                    // },
                                 })} name="password" type="password" autoComplete="current-password" className="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm" placeholder="Password" />
                                 <small className="text-red-600">
                                     {errors?.password && errors.password.message}
@@ -161,7 +176,6 @@ const Register = () => {
                                 <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
                                 <input id="confirmPassword" {...register('confirmPassword', {
                                     required: "Confirm password is required.",
-                                    onChange: (e) => handleChange(e),
                                     validate:(val)=>{
                                         if(val!== watch('password'))return 'Those passwords didn’t match. Try again.'
                                     }
